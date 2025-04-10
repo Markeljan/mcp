@@ -1,3 +1,4 @@
+import { base } from 'viem/chains';
 import { config } from '../config';
 
 // Reusable API client function
@@ -46,3 +47,20 @@ export async function callBitteAPI(
     };
   }
 }
+
+export const parseMbMetadata = (mbMetadata: string | string[] | undefined) => {
+  try {
+    if (mbMetadata && typeof mbMetadata === 'string') {
+      const parsed = JSON.parse(mbMetadata);
+      return {
+        evmAddress: parsed.evmAddress || '',
+        accountId: parsed.accountId || '',
+        chainId: parsed.chainId || base.id,
+      };
+    }
+  } catch (error) {
+    console.error('Error parsing MB metadata:', mbMetadata, error);
+  }
+
+  return { evmAddress: '', accountId: '', chainId: base.id };
+};

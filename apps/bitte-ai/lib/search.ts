@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { services } from '../tools';
+import { services, type ToolService, type ToolSessionData } from '../tools';
 import { callBitteAPI } from '../utils/bitte';
 import type { Agent } from '../utils/bitte-registry';
 import { searchArray } from '../utils/search';
@@ -176,10 +176,15 @@ export interface ToolsSearchResult {
  * @param log Optional logger
  * @returns Combined search results
  */
-export async function searchTools(
-  params: SearchToolsParams,
-  log?: { info?: (message: string) => void; error?: (message: string) => void }
-): Promise<ToolsSearchResult> {
+export async function searchTools({
+  params,
+  session,
+  log,
+}: {
+  params: SearchToolsParams;
+  session: ToolSessionData;
+  log?: { info?: (message: string) => void; error?: (message: string) => void };
+}): Promise<ToolsSearchResult> {
   log?.info?.(`Searching tools with params: ${JSON.stringify(params)}`);
   // Merge with default parameters
   const mergedParams = { ...DEFAULT_TOOLS_SEARCH_PARAMS, ...params };
@@ -250,7 +255,7 @@ export async function searchTools(
           const service = services[serviceName as ServiceKey];
 
           // Get tools from the service
-          const tools = (await service.tools()) as GenericTool[];
+          const tools = (await service.tools(session)) as GenericTool[];
 
           if (tools.length > 0) {
             // If query is "*", return all tools without searching

@@ -1,6 +1,7 @@
-import { getOnChainTools } from '@goat-sdk/adapter-model-context-protocol';
-import { USDC, WETH, erc20 } from '@goat-sdk/plugin-erc20';
-import { wallet } from './wallet';
+import { getOnChainTools } from "@goat-sdk/adapter-model-context-protocol";
+import { USDC, WETH, erc20 } from "@goat-sdk/plugin-erc20";
+import type { MCPToolSessionData } from "../index";
+import { buildAdvancedWallet } from "./wallet";
 
 // Define a type for the tool objects
 type Tool = {
@@ -12,10 +13,12 @@ type Tool = {
 
 type ToolList = Tool[];
 
-export const getTools = async (): Promise<ToolList> => {
+export const getTools = async (
+  session: MCPToolSessionData
+): Promise<ToolList> => {
   const onChainToolsAdapter = await getOnChainTools({
     plugins: [erc20({ tokens: [USDC, WETH] })],
-    wallet: wallet,
+    wallet: buildAdvancedWallet(session),
   });
 
   const rawTools = onChainToolsAdapter.listOfTools();
@@ -24,7 +27,24 @@ export const getTools = async (): Promise<ToolList> => {
   const tools = rawTools.map((tool) => ({
     ...tool,
     execute: async (params: unknown) => {
-      return await onChainToolsAdapter.toolHandler(tool.name, params);
+      console.log("tool", tool.name, params);
+
+      try {
+        // Execute the tool handler - this will now return immediately
+        // for operations that require client interaction because they use the promise registry
+        const result = await onChainToolsAdapter.toolHandler(tool.name, params);
+
+        // Return the result along with the toolCall for client-side processing
+        return {
+          result,
+          toolCall: session.toolCall,
+        };
+      } catch (error) {
+        console.error(`Error executing tool ${tool.name}:`, error);
+
+        // Re-throw the error
+        throw error;
+      }
     },
   }));
 
